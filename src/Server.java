@@ -19,8 +19,8 @@ public class Server {
     boolean isCoordinator = false;
 
     Socket coordinatorSocket = null;
-    int coordinatorPort = 8006;
-    int coordinatorId = 5;
+    int coordinatorPort = 8003;
+    int coordinatorId = 3;
 
     int successorPort;
     int successorId;
@@ -32,7 +32,7 @@ public class Server {
         this.host = host;
         this.port = port;
 
-        if(id == 5){
+        if(id == 3){
             isCoordinator = true;
             nodes = new ArrayList<>();
             initNodes();
@@ -49,74 +49,80 @@ public class Server {
 
     public void start(){
         try{
-            serverSocket = new ServerSocket(port);
-            System.out.println("Port " + port + " server started");
+                serverSocket = new ServerSocket(port);
+                System.out.println("Port " + port + " server started");
 
-            // check if all nodes are online
-            if(isCoordinator){
-                boolean res = checkNodeList();
-                if(!res)
-                    System.exit(0);
-            }
+                // check if all nodes are online
+                if (isCoordinator) {
+                    boolean res = checkNodeList();
+                    if (!res)
+                        System.exit(0);
+                }
 
-            System.out.println("Waiting for a client ...");
-            socket = serverSocket.accept();
-            System.out.println("Client accepted");
+//            checkValidCoordinator();
 
-            // takes input from the client socket
-            in = new DataInputStream(
-                    new BufferedInputStream(socket.getInputStream()));
+            while(true) {
+                System.out.println("Waiting for a client ...");
+                socket = serverSocket.accept();
+                System.out.println("Client accepted");
 
-            String line = "";
+                // takes input from the client socket
+                in = new DataInputStream(
+                        new BufferedInputStream(socket.getInputStream()));
 
-            // reads message from client until "Over" is sent
-            if (!line.equals("over"))
-            {
-                try
-                {
-                    line = in.readUTF();
-                    String[] pieces = line.split(",");
-                    String command = pieces[0];
+                String line = "";
 
-                    if(command.equals("init")){
-                        successorPort = Integer.parseInt(pieces[2]);
-                        successorId = Integer.parseInt(pieces[3]);
-                    }
-                    else if (command.equals("ELECTION")){
-                        // check is back
-                        String[] tmp = pieces[1].substring(1, pieces[1].length() - 1).split(",");
-                        int i = Integer.parseInt(tmp[0]);
-                        if(i == id){
-                            // find the largest one
-                            int max = -1;
+                // reads message from client until "Over" is sent
+                if (!line.equals("over")) {
+                    try {
+                        line = in.readUTF();
+                        String[] pieces = line.split(",");
+                        String command = pieces[0];
 
-                            for(String s: tmp){
-                                max = Math.max(max, Integer.parseInt(s));
+                        if (command.equals("init")) {
+                            successorPort = Integer.parseInt(pieces[2]);
+                            successorId = Integer.parseInt(pieces[3]);
+                            System.out.println("init successor");
+                        } else if (command.equals("ELECTION")) {
+                            // check is back
+                            String[] tmp = pieces[1].substring(1, pieces[1].length() - 1).split(",");
+                            int i = Integer.parseInt(tmp[0]);
+                            if (i == id) {
+                                // find the largest one
+                                int max = -1;
+
+                                for (String s : tmp) {
+                                    max = Math.max(max, Integer.parseInt(s));
+                                }
+                                writeToSuccessor("COORDINATOR,{" + max + "}");
+
+                            } else {
+                                String msg = pieces[1].substring(0, pieces[1].length() - 1) + "," + id + "}";
+
+                                writeToSuccessor(msg);
+                                System.out.println("Send to " + successorId + ": ELECTION " + msg);
                             }
-                            writeToSuccessor("COORDINATOR,{" + max + "}");
+                        } else if (command.equals("COORDINATOR")) {
+                            coordinatorId = Integer.parseInt(pieces[1].substring(1, pieces[1].length() - 1));
+                            coordinatorPort = 8000 + coordinatorId;
+                            System.out.println("Receive coordinator: " + coordinatorId);
+                            if (coordinatorId != id)
+                                writeToSuccessor(line);
                         }
-                        else{
-                            String msg = pieces[1].substring(0, pieces[1].length() - 1) + "," + id + "}";
 
-                            writeToSuccessor(msg);
-                        }
+                    } catch (IOException i) {
+                        System.out.println(i);
                     }
-                    else if(command.equals("COORDINATOR")){
-//                        coordinatorId = pieces[1];
-                    }
-
                 }
-                catch(IOException i)
-                {
-                    System.out.println(i);
+                else{
+                    break;
                 }
+                System.out.println("Closing connection");
+                // close connection
+                if (socket != null)
+                    socket.close();
+                in.close();
             }
-            System.out.println("Closing connection");
-
-            // close connection
-            if(socket!= null)
-                socket.close();
-            in.close();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -206,7 +212,10 @@ public class Server {
         int port = Integer.parseInt(args[2]);
 
         Server server = new Server(id, host, port);
-        server.start();
+//        while(true){
+            server.start();
+
+//        }
 
     }
 
