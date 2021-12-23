@@ -18,10 +18,9 @@ public class Server {
     private DataOutputStream out     = null;
     boolean isCoordinator = false;
 
-    Socket coordinatorSocket = null;
     int coordinatorPort = 8002;
     int coordinatorId = 2;
-    boolean isChanging = false;
+    boolean isElecting = false;
 
     int successorPort = -1;
     int successorId = -1;
@@ -42,11 +41,10 @@ public class Server {
     }
 
     public void checkValidCoordinator(){
-        if(successorId != -1 && id > coordinatorId && !isChanging){
-            System.out.println("dfdfs");
+        if(successorId != -1 && id > coordinatorId && !isElecting){
             String msg = "ELECTION {" + id + "}";
             writeToSuccessor(msg);
-            isChanging = true;
+            isElecting = true;
         }
     }
 
@@ -57,7 +55,7 @@ public class Server {
 
                 // check if all nodes are online
                 if (isCoordinator) {
-                    boolean res = checkNodeList();
+                    boolean res = checkOnlineNodes();
                     if (!res)
                         System.exit(0);
                 }
@@ -76,7 +74,7 @@ public class Server {
                 String line = "";
 
                 // reads message from client until "Over" is sent
-                if (!line.equals("over")) {
+                if (!line.equals("OVER")) {
                     try {
                         line = in.readUTF();
                         System.out.println(line);
@@ -114,9 +112,9 @@ public class Server {
                             if (coordinatorId != id)
                                 writeToSuccessor(line);
                             else{
-                                isChanging = false;
+                                isElecting = false;
                                 isCoordinator = true;
-                                boolean res = checkNodeList();
+                                boolean res = checkOnlineNodes();
                                 if (!res)
                                     System.exit(0);
                             }
@@ -178,11 +176,11 @@ public class Server {
 
     }
 
-    public void writeLog(){
+    public void formMsg(String type, String msg){
 
     }
 
-    public boolean checkNodeList(){
+    public boolean checkOnlineNodes(){
         NodeInfo n = null;
         try{
             for(int i = 0; i < nodes.size(); i++){
@@ -223,10 +221,7 @@ public class Server {
         int port = Integer.parseInt(args[2]);
 
         Server server = new Server(id, host, port);
-//        while(true){
             server.start();
-
-//        }
 
     }
 
