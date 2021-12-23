@@ -19,11 +19,12 @@ public class Server {
     boolean isCoordinator = false;
 
     Socket coordinatorSocket = null;
-    int coordinatorPort = 8003;
-    int coordinatorId = 3;
+    int coordinatorPort = 8002;
+    int coordinatorId = 2;
+    boolean isChanging = false;
 
-    int successorPort;
-    int successorId;
+    int successorPort = -1;
+    int successorId = -1;
 
 
 
@@ -32,7 +33,7 @@ public class Server {
         this.host = host;
         this.port = port;
 
-        if(id == 3){
+        if(id == coordinatorId){
             isCoordinator = true;
             nodes = new ArrayList<>();
             initNodes();
@@ -41,9 +42,11 @@ public class Server {
     }
 
     public void checkValidCoordinator(){
-        if(id > coordinatorId){
-            String msg = "ELECTION,{" + id + "}";
+        if(successorId != -1 && id > coordinatorId && !isChanging){
+            System.out.println("dfdfs");
+            String msg = "ELECTION {" + id + "}";
             writeToSuccessor(msg);
+            isChanging = true;
         }
     }
 
@@ -59,12 +62,12 @@ public class Server {
                         System.exit(0);
                 }
 
-//            checkValidCoordinator();
 
             while(true) {
-                System.out.println("Waiting for a client ...");
+                checkValidCoordinator();
+//                System.out.println("Waiting for a client ...");
                 socket = serverSocket.accept();
-                System.out.println("Client accepted");
+//                System.out.println("Client accepted");
 
                 // takes input from the client socket
                 in = new DataInputStream(
@@ -76,13 +79,14 @@ public class Server {
                 if (!line.equals("over")) {
                     try {
                         line = in.readUTF();
-                        String[] pieces = line.split(",");
+                        System.out.println(line);
+                        String[] pieces = line.split(" ");
                         String command = pieces[0];
 
-                        if (command.equals("init")) {
-                            successorPort = Integer.parseInt(pieces[2]);
-                            successorId = Integer.parseInt(pieces[3]);
-                            System.out.println("init successor");
+                        if (command.equals("INIT")) {
+                            String[] tmp = pieces[1].split(",");
+                            successorPort = Integer.parseInt(tmp[0]);
+                            successorId = Integer.parseInt(tmp[1]);
                         } else if (command.equals("ELECTION")) {
                             // check is back
                             String[] tmp = pieces[1].substring(1, pieces[1].length() - 1).split(",");
@@ -94,20 +98,28 @@ public class Server {
                                 for (String s : tmp) {
                                     max = Math.max(max, Integer.parseInt(s));
                                 }
-                                writeToSuccessor("COORDINATOR,{" + max + "}");
+
+                                String msg = "COORDINATOR {" + max + "}";
+                                writeToSuccessor(msg);
 
                             } else {
                                 String msg = pieces[1].substring(0, pieces[1].length() - 1) + "," + id + "}";
 
-                                writeToSuccessor(msg);
+                                writeToSuccessor("ELECTION " + msg);
                                 System.out.println("Send to " + successorId + ": ELECTION " + msg);
                             }
                         } else if (command.equals("COORDINATOR")) {
                             coordinatorId = Integer.parseInt(pieces[1].substring(1, pieces[1].length() - 1));
                             coordinatorPort = 8000 + coordinatorId;
-                            System.out.println("Receive coordinator: " + coordinatorId);
                             if (coordinatorId != id)
                                 writeToSuccessor(line);
+                            else{
+                                isChanging = false;
+                                isCoordinator = true;
+                                boolean res = checkNodeList();
+                                if (!res)
+                                    System.exit(0);
+                            }
                         }
 
                     } catch (IOException i) {
@@ -117,7 +129,7 @@ public class Server {
                 else{
                     break;
                 }
-                System.out.println("Closing connection");
+//                System.out.println("Closing connection");
                 // close connection
                 if (socket != null)
                     socket.close();
@@ -132,11 +144,11 @@ public class Server {
     public void writeToSuccessor(String msg){
         try {
             Socket successor = new Socket(host, successorPort);
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            DataOutputStream out = new DataOutputStream(successor.getOutputStream());
             out.writeUTF(msg);
 
             out.close();
-            socket.close();
+            successor.close();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -175,15 +187,14 @@ public class Server {
         try{
             for(int i = 0; i < nodes.size(); i++){
                 n = nodes.get(i);
-                if(n.id == id)
-                    continue;
                 socket = new Socket(n.host, n.port);
                 out = new DataOutputStream(socket.getOutputStream());
+
                 if(i < nodes.size() - 1){
-                    out.writeUTF("init,successor," + nodes.get(i + 1).port + "," + nodes.get(i + 1).id);
+                    out.writeUTF("INIT " + nodes.get(i + 1).port + "," + nodes.get(i + 1).id);
                 }
                 else{
-                    out.writeUTF("init,successor," + nodes.get(0).port + "," + nodes.get(0).id);
+                    out.writeUTF("INIT " + nodes.get(0).port + "," + nodes.get(0).id);
                 }
                 socket.close();
                 out.close();
