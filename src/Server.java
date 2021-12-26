@@ -6,7 +6,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class Server {
-    ArrayList<NodeInfo> nodes = new ArrayList<>();
+    ArrayList<NodeInfo> nodes;
     String FILENAME = "./src/servers.csv";
     String LOGFILE;
     int id;
@@ -70,7 +70,6 @@ public class Server {
                 // takes input from the client socket
                 in = new DataInputStream(
                         new BufferedInputStream(socket.getInputStream()));
-                BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
 
                 String line = "";
 
@@ -115,7 +114,6 @@ public class Server {
                             else{
                                 isElecting = false;
                                 isCoordinator = true;
-                                initNodes();
                                 boolean res = checkOnlineNodes();
                                 if (!res)
                                     System.exit(0);
@@ -178,6 +176,10 @@ public class Server {
 
     }
 
+    public void formMsg(String type, String msg){
+
+    }
+
     public boolean checkOnlineNodes(){
         NodeInfo n = null;
         try{
@@ -208,8 +210,6 @@ public class Server {
     }
 
 
-
-
     public static void main(String[] args){
         if(args.length != 3){
             System.out.println("Invalid arguments");
@@ -221,10 +221,7 @@ public class Server {
         int port = Integer.parseInt(args[2]);
 
         Server server = new Server(id, host, port);
-//        while(true){
             server.start();
-
-//        }
 
     }
 
