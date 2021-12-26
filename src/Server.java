@@ -34,7 +34,7 @@ public class Server {
 
         if(id == coordinatorId){
             isCoordinator = true;
-            nodes = new ArrayList<>();
+
             initNodes();
         }
         LOGFILE = "./src/" + port + ".log";
@@ -114,6 +114,7 @@ public class Server {
                             else{
                                 isElecting = false;
                                 isCoordinator = true;
+                                initNodes();
                                 boolean res = checkOnlineNodes();
                                 if (!res)
                                     System.exit(0);
@@ -155,6 +156,7 @@ public class Server {
     }
 
     public void initNodes(){
+        nodes = new ArrayList<>();
         try {
             BufferedReader reader = new BufferedReader(new FileReader(FILENAME));
             String line = "";
@@ -173,10 +175,6 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-    }
-
-    public void formMsg(String type, String msg){
 
     }
 
