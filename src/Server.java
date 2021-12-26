@@ -70,7 +70,7 @@ public class Server {
                 // takes input from the client socket
                 in = new DataInputStream(
                         new BufferedInputStream(socket.getInputStream()));
-
+                out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
                 String line = "";
 
                 // reads message from client until "Over" is sent
@@ -120,6 +120,14 @@ public class Server {
                                     System.exit(0);
                             }
                         }
+                        else if(command.equals("POST")){
+                            String[] tmp = pieces[1].split(",");
+                            int receiverId = Integer.parseInt(tmp[0]);
+                            String content = tmp[1];
+                            PostQueue.addPost(id, receiverId, content);
+                            out.writeUTF("OK");
+                            System.out.println("ok");
+                        }
 
                     } catch (IOException i) {
                         System.out.println(i);
@@ -133,6 +141,7 @@ public class Server {
                 if (socket != null)
                     socket.close();
                 in.close();
+//                out.close();
             }
 
         } catch (IOException e) {

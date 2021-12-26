@@ -104,19 +104,19 @@ public class Client {
             int choice = scanner.nextInt();
             if(choice == 0){ // receive
                 out.writeUTF("PULL");
-                String response = input.readLine();
+
 
             }
             else if(choice == 1){ // send
                 System.out.println("Enter the message for sending: ");
-                String msg = scanner.nextLine();
+                String msg = "hello";
 
                 System.out.println("Enter the server Id for sending: ");
                 int receiverId = scanner.nextInt();
 
                 String post = "POST " + receiverId + "," + msg;
                 out.writeUTF(post);
-                String response = input.readLine();
+                String response = input.readUTF();
                 System.out.println(response);
             }
             else{
