@@ -6,7 +6,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class Server {
-    ArrayList<NodeInfo> nodes;
+    ArrayList<NodeInfo> nodes = new ArrayList<>();
     String FILENAME = "./src/servers.csv";
     String LOGFILE;
     int id;
@@ -18,10 +18,9 @@ public class Server {
     private DataOutputStream out     = null;
     boolean isCoordinator = false;
 
-    Socket coordinatorSocket = null;
     int coordinatorPort = 8002;
     int coordinatorId = 2;
-    boolean isChanging = false;
+    boolean isElecting = false;
 
     int successorPort = -1;
     int successorId = -1;
@@ -42,11 +41,10 @@ public class Server {
     }
 
     public void checkValidCoordinator(){
-        if(successorId != -1 && id > coordinatorId && !isChanging){
-            System.out.println("dfdfs");
+        if(successorId != -1 && id > coordinatorId && !isElecting){
             String msg = "ELECTION {" + id + "}";
             writeToSuccessor(msg);
-            isChanging = true;
+            isElecting = true;
         }
     }
 
@@ -57,7 +55,7 @@ public class Server {
 
                 // check if all nodes are online
                 if (isCoordinator) {
-                    boolean res = checkNodeList();
+                    boolean res = checkOnlineNodes();
                     if (!res)
                         System.exit(0);
                 }
@@ -72,11 +70,12 @@ public class Server {
                 // takes input from the client socket
                 in = new DataInputStream(
                         new BufferedInputStream(socket.getInputStream()));
+                BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
 
                 String line = "";
 
                 // reads message from client until "Over" is sent
-                if (!line.equals("over")) {
+                if (!line.equals("OVER")) {
                     try {
                         line = in.readUTF();
                         System.out.println(line);
@@ -114,9 +113,10 @@ public class Server {
                             if (coordinatorId != id)
                                 writeToSuccessor(line);
                             else{
-                                isChanging = false;
+                                isElecting = false;
                                 isCoordinator = true;
-                                boolean res = checkNodeList();
+                                initNodes();
+                                boolean res = checkOnlineNodes();
                                 if (!res)
                                     System.exit(0);
                             }
@@ -178,11 +178,7 @@ public class Server {
 
     }
 
-    public void writeLog(){
-
-    }
-
-    public boolean checkNodeList(){
+    public boolean checkOnlineNodes(){
         NodeInfo n = null;
         try{
             for(int i = 0; i < nodes.size(); i++){
@@ -210,6 +206,8 @@ public class Server {
         }
         return true;
     }
+
+
 
 
     public static void main(String[] args){
